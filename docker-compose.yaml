@@ -27,7 +27,7 @@ services:
   filter:
     build:
       context: .
-      dockerfile: filters/filter.dockerfile
+      dockerfile: filters/twentieth_century/twentieth_century_filter.dockerfile
     depends_on:
       - rabbitmq
     links:
