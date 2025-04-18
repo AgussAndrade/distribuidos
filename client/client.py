@@ -7,7 +7,7 @@ class Client:
         self.producer = Producer("cola")
 
     def send(self, message: dict):
-        print(f"[CLIENT] Enviando mensaje: {message}")
+#        print(f"[CLIENT] Enviando mensaje: {message}")
         return self.producer.enqueue(message)
 
     def close(self):
