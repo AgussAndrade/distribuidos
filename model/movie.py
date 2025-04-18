@@ -6,6 +6,7 @@ class Movie:
     title: str
     production_countries: list[str]
     release_date: str
+    genres: list[str]
 
     def released_in_or_after_2000(self) -> bool:
         if not self.release_date:

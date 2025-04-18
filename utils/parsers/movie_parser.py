@@ -14,10 +14,12 @@ def convert_data(data):
     ])
 
     # ir sumando los campos a medida que se usan
+    # ver si se necesita que sea por cada filtro
     return [
         Movie(title=row["title"],
               production_countries=parse_production_countries(row["production_countries"]),
-              release_date=parse_release_date(row["release_date"]))
+              release_date=parse_release_date(row["release_date"]),
+              genres=parse_genres(row["genres"]))
         for row in reader
     ]
 
@@ -36,3 +38,11 @@ def parse_release_date(data):
     except Exception as e:
         print(f"[PARSE] Error parsing release_date: {data} -> {e}")
         return None
+
+def parse_genres(data):
+    try:
+        genres = ast.literal_eval(data)
+        return [g["name"] for g in genres if "name" in g]
+    except Exception as e:
+        print(f"[PARSE] Error parsing genres: {data} -> {e}")
+        return []
