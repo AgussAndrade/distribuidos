@@ -1,3 +1,4 @@
+'''
 import json
 
 from filters.twentieth_century.twentieth_century_filter import apply_filter
@@ -27,4 +28,4 @@ class ArgEspProductionFilter:
             encoded = json.dumps([movie_to_dict(m) for m in filtered_movies])
             self.producer.enqueue(encoded.encode())
 
-        return movies
+        return movies'''

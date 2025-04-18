@@ -2,18 +2,19 @@ import time
 import json
 
 from middleware.consumer.consumer import Consumer
-from middleware.producer.producer import Producer
+#from middleware.producer.producer import Producer
 from model.movie import movie_to_dict
 from utils.parsers.movie_parser import convert_data
 
 class TwentiethCenturyFilter:
-    def __init__(self, queue_name='cola', next_queue='cola_filtro_20'):
+    #def __init__(self, queue_name='cola', next_queue='cola_filtro_20'):
+    def __init__(self, queue_name='cola'):
         self.movies_filtered = []
         self.consumer = Consumer(
             queue_name=queue_name,
             message_factory=self.handle_message
         )
-        self.producer = Producer(next_queue)
+        #self.producer = Producer(next_queue)
 
     def handle_message(self, message_bytes: bytes):
         batch = json.loads(message_bytes.decode())
@@ -24,7 +25,7 @@ class TwentiethCenturyFilter:
 
         if filtered_movies:
             encoded = json.dumps([movie_to_dict(m) for m in filtered_movies])
-            self.producer.enqueue(encoded.encode())
+            #self.producer.enqueue(encoded.encode())
 
         return movies
 
