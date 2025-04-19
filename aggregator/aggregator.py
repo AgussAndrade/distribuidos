@@ -40,7 +40,7 @@ class Aggregator:
                     logger.info(f"Batches recibidos: {self.received_batches}/{self.total_batches}")
 
                     # Si hemos recibido todos los batches, enviar el resultado final
-                    if self.total_batches and self.total_batches > 0 and self.received_batches >= self.total_batches:
+                    if self.total_batches and 0 < self.total_batches <= self.received_batches:
                         result_message = {
                             "type": "result",
                             "movies": self.filtered_movies,
