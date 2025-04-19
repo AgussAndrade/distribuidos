@@ -6,8 +6,8 @@ from middleware.consumer.consumer import Consumer
 
 class Client:
     def __init__(self, batch_size: int = 10):
-        self.producer = Producer("movie")
-        self.producer_1 = Producer("movie_1")
+        self.movie_producer = Producer("movie")
+        self.actor_producer = Producer("actor")
         self.consumer = Consumer("result")
         self.batch_size = batch_size
 
@@ -16,7 +16,7 @@ class Client:
         start_time = time.time()
         retry_interval = 0.1  # 100ms entre intentos
         results_received = 0
-        
+
         while time.time() - start_time < timeout:
             result = self.consumer.dequeue()
             if result:
@@ -25,23 +25,24 @@ class Client:
                 if results_received >= expected_results:
                     return True
             time.sleep(retry_interval)
-        
+
         print(f"[ERROR] Timeout esperando resultados. Recibidos: {results_received}/{expected_results}")
         return False
 
     def close(self):
         """Cierra las conexiones"""
-        self.producer.close()
+        self.movie_producer.close()
+        self.actor_producer.close()
         self.consumer.close()
 
-    def send(self, message: dict) -> (bool, bool):
+    def send(self, message: dict, producer:Producer) -> bool:
         """Envía un mensaje y maneja errores"""
         try:
             print(f"[CLIENT] Enviando mensaje: {message}")
-            return (self.producer.enqueue(message),self.producer_1.enqueue(message))
+            return  producer.enqueue(message)
         except Exception as e:
             print(f"[ERROR] Error al enviar mensaje: {e}")
-            return (False, False)
+            return False
 
     def process_file(self, file_path: str) -> Generator[tuple[list[str], bool], None, None]:
         """Procesa el archivo en lotes de manera eficiente"""
@@ -81,32 +82,28 @@ def wait_for_rabbitmq(max_retries: int = 30, retry_interval: float = 1.0) -> boo
         time.sleep(retry_interval)
     return False
 
-if __name__ == '__main__':
-    if not wait_for_rabbitmq():
-        print("[ERROR] No se pudo conectar con RabbitMQ después de varios intentos")
-        exit(1)
 
-    client = Client(batch_size=100)
+def send_file(file_name, file_type, producer:Producer):
     successful_batches = 0
     total_batches = 0
 
     try:
-        for batch, is_last in client.process_file("root/files/movies.txt"):
+        for batch, is_last in client.process_file(file_name):
             message = {
-                "type": "movie",
+                "type": file_type,
                 "cola": batch,
                 "batch_size": len(batch),
                 "total_batches": total_batches + len(batch) if is_last else 0
             }
-            result_0, result_1 = client.send(message)
+            result = client.send(message, producer)
 
-            if result_0 or result_1:
+            if result:
                 successful_batches += 1
                 print(f"[MAIN] Batch {total_batches + 1} enviado correctamente")
             else:
                 print(f"[ERROR] Falló el envío del batch {total_batches + 1}")
             total_batches += len(batch)
-        
+
         # Esperar por 5 resultados (uno por cada filtro)
         if not client.wait_for_result(expected_results=1, timeout=1000):
             print(f"[WARNING] Timeout esperando resultados finales")
@@ -117,5 +114,18 @@ if __name__ == '__main__':
         print(f"\nResumen:")
         print(f"Total de lotes procesados: {total_batches}")
         print(f"Lotes exitosos: {successful_batches}")
-        print(f"Tasa de éxito: {(successful_batches/total_batches)*100:.2f}%")
-        client.close()
+        #print(f"Tasa de éxito: {(successful_batches / total_batches) * 100:.2f}%")
+
+
+if __name__ == '__main__':
+    if not wait_for_rabbitmq():
+        print("[ERROR] No se pudo conectar con RabbitMQ después de varios intentos")
+        exit(1)
+
+    client = Client(batch_size=5)
+
+    send_file("root/files/movies.txt", "movie", client.movie_producer)
+    send_file("root/files/credits.csv", "actor", client.actor_producer)
+
+    client.close()
+

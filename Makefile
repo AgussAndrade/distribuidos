@@ -25,6 +25,7 @@ docker-image:
 
 	docker build -f ./filters/twentieth_century/twentieth_century_filter.dockerfile --no-cache -t "twentieth_century_filter:latest" .
 	docker build -f ./filters/arg_esp_production/arg_esp_production_filter.dockerfile --no-cache -t "arg_esp_production_filter:latest" .
+	docker build -f ./filters/top_actors/top_actors_filter.dockerfile --no-cache -t "top_actors_filter:latest" .
 
 	# Execute this command from time to time to clean up intermediate stages generated
 	# during client build (your hard drive will like this :) ). Don't left uncommented if you

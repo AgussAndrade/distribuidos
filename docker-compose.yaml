@@ -56,3 +56,14 @@ services:
       - rabbitmq
     environment:
       - PYTHONUNBUFFERED=1
+
+  top_actors_filter:
+    build:
+      context: .
+      dockerfile: filters/top_actors/top_actors_filter.dockerfile
+    depends_on:
+      - rabbitmq
+    links:
+      - rabbitmq
+    environment:
+      - PYTHONUNBUFFERED=1
