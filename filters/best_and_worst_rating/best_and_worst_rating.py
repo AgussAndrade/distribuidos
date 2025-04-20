@@ -7,7 +7,7 @@ from middleware.producer.producer import Producer
 from utils.parsers.movie_parser import convert_data
 
 
-class ArgEspProductionFilter:
+class BestAndWorstRating:
     def __init__(self):
         self.movies = None
         self.consumer_ratings = None # No consumimos de la cola de ratings hasta tener los resultados de
@@ -25,15 +25,15 @@ class ArgEspProductionFilter:
         )
         # TODO Cerrar el consumidor de movies
         self.movies = message.get("movies")
+        return None
 
     def handle_message(self, message):
         if message.get("type") == "shutdown":
             return message
 
-        best_and_worst = best_and_worst_ratings(message.get("movies"), message.get("ratings"))
+        best_and_worst = self.best_and_worst_ratings(self.movies, message.get("ratings"))
 
-        return batch_message
-
+        return best_and_worst
 
     def start(self):
         """Inicia el procesamiento de películas"""
@@ -59,15 +59,54 @@ class ArgEspProductionFilter:
         self.producer.close()
 
 def best_and_worst_ratings(movies, ratings):
-    # TODO aca se crea el resultado a partir de las peliculas filtradas y los ratings
+    movie_ratings = {}
+    for rating in ratings:
+        movie_id = rating.get("movie_id")
+        movie_rating = rating.get("rating")
+        if movie_id and movie_rating is not None:
+            if movie_id not in movie_ratings:
+                movie_ratings[movie_id] = {"sum": 0, "count": 0}
+            movie_ratings[movie_id]["sum"] += movie_rating
+            movie_ratings[movie_id]["count"] += 1
+
+    if not movie_ratings:
+        return {
+            "best": None,
+            "best_rating": None,
+            "worst": None,
+            "worst_rating": None
+        }
+
+    average_ratings = {}
+    for movie_id, data in movie_ratings.items():
+        average_ratings[movie_id] = data["sum"] / data["count"]
+
+    best_rated_movie = None
+    worst_rated_movie = None
+    best_rating = -1
+    worst_rating = float('inf')
+
+    movie_index = {movie.get("id"): movie for movie in movies if movie.get("id") is not None}
+
+    for movie_id, avg_rating in average_ratings.items():
+        movie = movie_index.get(movie_id)
+        if movie:
+            if avg_rating > best_rating:
+                best_rating = avg_rating
+                best_rated_movie = movie
+            if avg_rating < worst_rating:
+                worst_rating = avg_rating
+                worst_rated_movie = movie
+
     batch_message = {
-        "best": filteredmovies_movies,
-        "best_rating": message.get("batch_size", 0),
-        "worst": message.get("total_batches", 0),
-        "worst_rating": "batch_result"
+        "best": best_rated_movie.get("title") if best_rated_movie else None,
+        "best_rating": best_rating if best_rated_movie else None,
+        "worst": worst_rated_movie.get("title") if worst_rated_movie else None,
+        "worst_rating": worst_rating if worst_rated_movie else None
     }
+
     return batch_message
 
 if __name__ == '__main__':
-    filter = ArgEspProductionFilter()
+    filter = BestAndWorstRating()
     filter.start()

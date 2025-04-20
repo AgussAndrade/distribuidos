@@ -67,3 +67,15 @@ services:
       - rabbitmq
     environment:
       - PYTHONUNBUFFERED=1
+
+  best_and_worst_rating:
+    build:
+      context: .
+      dockerfile: filters/top_actors/best_and_worst_rating.dockerfile
+    depends_on:
+      - rabbitmq
+    links:
+      - rabbitmq
+    environment:
+      - PYTHONUNBUFFERED=1
+
