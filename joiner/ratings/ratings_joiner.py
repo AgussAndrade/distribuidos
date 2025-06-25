@@ -31,7 +31,6 @@ class RatingsJoiner(AbstractAggregator):
         aggregator_host = os.getenv("AGGREGATOR_HOST", "best_and_worst_ratings_aggregator")
         aggregator_port = int(os.getenv("AGGREGATOR_PORT", 60002))
         self.tcp_client = TCPClient(aggregator_host, aggregator_port)
-        self.logger.info(f"TCP Client inicializado en {aggregator_host}:{aggregator_port}")
         
         self.movies = {}
         self.recover_movies()

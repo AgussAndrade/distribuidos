@@ -24,7 +24,6 @@ class CreditsJoiner(AbstractAggregator):
         aggregator_host = os.getenv("AGGREGATOR_HOST", "top_10_credits_aggregator")
         aggregator_port = int(os.getenv("AGGREGATOR_PORT", 60000))
         self.tcp_client = TCPClient(aggregator_host, aggregator_port)
-        self.logger.info(f"TCP Client inicializado en {aggregator_host}:{aggregator_port}")
         self.joiner_instance_id = os.environ.get("JOINER_INSTANCE_ID", "joiner_credits")
         super().__init__()
         self.has_recovered_at_least_once = False
