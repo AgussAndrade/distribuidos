@@ -4,6 +4,7 @@ import json
 from middleware.consumer.consumer import Consumer
 from middleware.producer.producer import Producer
 from middleware.producer.publisher import Publisher
+from middleware.tcp_protocol.tcp_protocol import TCPServer
 from worker.abstractaggregator.abstractaggregator import AbstractAggregator
 
 
@@ -12,13 +13,15 @@ class Aggregator(AbstractAggregator):
         super().__init__()
         self.control_received_batches_per_client = defaultdict(int)
         self.batches_by_joiner = defaultdict(set)
-        self.tcp_host = os.getenv("AGGREGATOR_HOST", "aggregator_top_10")
+        self.tcp_host = os.getenv("AGGREGATOR_HOST", "best_and_worst_ratings_aggregator")
         self.tcp_port = int(os.getenv("AGGREGATOR_PORT", 60002))
-        # self.server = TCPServer(self.tcp_host, self.tcp_port, self._handle_tcp_message)
         self.joiner_control_publisher = Publisher("joiner_control_ratings")
         self.processed_batches_map = defaultdict(set)
+        self.logger.info(f"TCP Server inicializado en {self.tcp_host}:{self.tcp_port}")
+        self.tcp_server = TCPServer(self.tcp_host, self.tcp_port, self._handle_tcp_message)
         self.control_log_name = "_ratings_control.log"
         self.recover_control_messages()
+        self.batch_to_joiner = {}
 
     def create_consumer(self):
         return Consumer("best_and_worst_ratings_partial_result",
@@ -116,25 +119,37 @@ class Aggregator(AbstractAggregator):
             "min_rating": min_rating,
         }
 
-    def _handle_tcp_message(self, msg, addr):
+    def _handle_tcp_message(self, msg, addr, client_socket):
         try:
-            self.logger.info(f"[TCP] Mensaje recibido de {addr}: {msg}")
+            self.logger.info(f"[TCP] Mensaje de control recibido: {msg}")
             data_json = json.loads(msg)
-            if data_json.get("type") != "batch_id":
-                return
-            batch_id = data_json.get("batch_id")
-            joiner_instance_id = data_json.get("joiner_instance_id")
-            if batch_id is None or joiner_instance_id is None:
-                self.logger.warning(f"[TCP] batch_id o joiner_instance_id faltante en mensaje: {msg}")
-                return
-            self.batches_by_joiner[joiner_instance_id].add(str(batch_id))
+            message_type = data_json.get("type")
+            if message_type == "control": #mensaje de control para guardar el batch_id y el joiner_instance_id
+                batch_id = data_json.get("batch_id")
+                joiner_instance_id = data_json.get("joiner_instance_id")
+                client_id = data_json.get("client_id")
+                joiner_instance_id_from_dic = self.batch_to_joiner.get(batch_id, None)
+                if joiner_instance_id_from_dic is None:
+                    self.batch_to_joiner[batch_id] = joiner_instance_id
+
+                self.handle_control_message(data_json)
+
+            elif message_type == "batch_processed": #consulta del joiner cuando arranca para saber si ya proceso el batch
+                joiner_instance_id = self.batch_to_joiner.get(data_json.get("batch_id"), '-1')
+                client_socket.send(json.dumps({
+                    "type": "batch_processed",
+                    "joiner_instance_id": joiner_instance_id
+                }).encode('utf-8') + b'\n')
+            else:
+                self.logger.warning(f"[TCP] Tipo de mensaje desconocido: {message_type}")
+                
         except Exception as e:
             self.logger.error(f"[TCP] Error procesando mensaje recibido: {e}")
 
     def close(self):
         self.logger.info("Cerrando conexiones del worker...")
         try:
-            #self.server.stop()
+            self.tcp_server.stop()
             self.consumer.close()
             self.producer.close()
             self.shutdown_consumer.close()
@@ -174,7 +189,7 @@ class Aggregator(AbstractAggregator):
                 os.remove(control_log_filename)
     def start(self):
         self.logger.info("Iniciando agregador")
-        # self.server.start()
+        self.tcp_server.start()
         super().start()
 
     def persist_control_message(self, client_id, batch_id, joiner_id, batch_size, total_batches):

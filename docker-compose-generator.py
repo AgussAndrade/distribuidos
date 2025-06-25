@@ -138,6 +138,8 @@ def generate_docker_yaml(config):
         elif "ratings_joiner" in name:
             env.append(f"JOINER_INSTANCE_ID=ratings-{ratings_joiner_id_counter}")
             ratings_joiner_id_counter += 1
+            env.append("AGGREGATOR_HOST=best_and_worst_ratings_aggregator")
+            env.append("AGGREGATOR_PORT=60002")
 
         base_service = {
             "build": {
@@ -158,6 +160,17 @@ def generate_docker_yaml(config):
 
         for i in range(1, count):
             replica_name = f"{name}_{i + 1}"
+            replica_env = ["PYTHONUNBUFFERED=1", f"LOG_LEVEL={log_level}"]
+            
+            if "credits_joiner" in name:
+                replica_env.append(f"JOINER_INSTANCE_ID=credits-{credits_joiner_id_counter + i}")
+                replica_env.append("AGGREGATOR_HOST=top_10_credits_aggregator")
+                replica_env.append("AGGREGATOR_PORT=60000")
+            elif "ratings_joiner" in name:
+                replica_env.append(f"JOINER_INSTANCE_ID=ratings-{ratings_joiner_id_counter + i}")
+                replica_env.append("AGGREGATOR_HOST=best_and_worst_ratings_aggregator")
+                replica_env.append("AGGREGATOR_PORT=60002")
+            
             template["services"][replica_name] = {
                 "image": f"{name}:latest",
                 "container_name": f"{replica_name}",
@@ -166,7 +179,7 @@ def generate_docker_yaml(config):
                     "worker": {"condition": "service_started"}
                 },
                 "links": ["rabbitmq"],
-                "environment": ["PYTHONUNBUFFERED=1", f"LOG_LEVEL={log_level}"]
+                "environment": replica_env
             }
             all_services.append(replica_name)
 
@@ -210,6 +223,8 @@ def generate_docker_yaml(config):
 
         if "credits" in name:
             service_def["ports"] = ["60000:60000"]
+        elif "ratings" in name:
+            service_def["ports"] = ["60002:60002"]
 
         template["services"][name] = service_def
         all_services.append(name)

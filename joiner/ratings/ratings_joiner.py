@@ -2,6 +2,7 @@ import json
 import os
 import random
 import string
+import logging
 from collections import defaultdict
 
 from middleware.consumer.consumer import Consumer
@@ -9,24 +10,36 @@ from middleware.consumer.subscriber import Subscriber
 from middleware.producer.producer import Producer
 from utils.parsers.ratings_parser import convert_data_for_rating_joiner
 from worker.abstractaggregator.abstractaggregator import AbstractAggregator
+from middleware.tcp_protocol.tcp_protocol import TCPClient
 
 PENDING_MESSAGES = "/root/files/ratings_pending.jsonl"
 
 
 class RatingsJoiner(AbstractAggregator):
     def __init__(self):
-        super().__init__()
-        self.has_recovered_at_least_one = False
+        self.logger = logging.getLogger(__name__)
+        logging.basicConfig(
+            format='%(asctime)s %(levelname)-8s %(message)s',
+            level=logging.DEBUG,
+            datefmt='%H:%M:%S')
+        self.has_recovered_at_least_once = False
         self.movies_name = "_ratings_movies.json"
         self.pending_file = "_ratings_pending.json"
-        self.joiner_instance_id = os.environ.get("JOINER_INSTANCE_ID", "joiner_credits")
+        self.joiner_instance_id = os.environ.get("JOINER_INSTANCE_ID", "joiner_ratings")
+        super().__init__()
+
+        aggregator_host = os.getenv("AGGREGATOR_HOST", "best_and_worst_ratings_aggregator")
+        aggregator_port = int(os.getenv("AGGREGATOR_PORT", 60002))
+        self.tcp_client = TCPClient(aggregator_host, aggregator_port)
+        self.logger.info(f"TCP Client inicializado en {aggregator_host}:{aggregator_port}")
+        
         self.movies = {}
         self.recover_movies()
         self.movies_consumer = Subscriber("20_century_arg_result",
                                           message_handler=self.handle_movies_message)
         self.ratings_producer = Producer(queue_name="ratings", queue_type="direct")
         self.control_consumer = Subscriber("joiner_control_ratings", message_handler=self.handle_control_message)
-        if self.has_recovered_at_least_one:
+        if self.has_recovered_at_least_once:
             self.consumer.start()
 
     def create_consumer(self):
@@ -127,6 +140,8 @@ class RatingsJoiner(AbstractAggregator):
             self.shutdown_consumer.close()
             self.control_consumer.close()
             self.ratings_producer.close()
+            if self.tcp_client:
+                self.tcp_client.close()
         except Exception as e:
             self.logger.exception(f"❌ Error al cerrar conexiones: {e}")
 
@@ -287,7 +302,7 @@ class RatingsJoiner(AbstractAggregator):
                     raw_json = lines[0][len("BEGIN_TRANSACTION;"):]
                     movies = json.loads(raw_json)
                     self.set_movies_for_client(client_id, movies)
-                    self.has_recovered_at_least_one = True
+                    self.has_recovered_at_least_once = True
                     self.logger.info(
                         f"Películas recuperadas para cliente {client_id}: {len(self.movies[client_id])} items.")
 
@@ -304,6 +319,57 @@ class RatingsJoiner(AbstractAggregator):
             self.shutdown_event.wait()
         finally:
             self.close()
+
+    # def format_message(self, message):
+    #     if isinstance(message, dict):
+    #         return json.dumps(message) + '\n'
+    #     else:
+    #         return str(message) + '\n'
+
+    # def handle_message(self, message):
+    #     batch_id = message.get("batch_id")
+    #     client_id = message.get("client_id")
+        
+    #     control_message = {
+    #         "type": "batch_processed",
+    #         "batch_id": batch_id,
+    #         "client_id": client_id,
+    #     }
+        
+    #     formatted_message = self.format_message(control_message)
+    #     self.logger.info(f"Enviando mensaje de batch_processed al aggregator: {control_message}")
+    #     processing_status = self.tcp_client.send_with_response(formatted_message, self._handle_batch_processed)
+        
+    #     if processing_status is True:
+    #         self.consumer.ack(batch_id)
+    #     elif processing_status is False:
+    #         super().handle_message(message)
+    #     elif processing_status is None:
+    #         self.logger.warning(f"⚠️ Batch {batch_id} fallo al preguntar al aggregator si ya lo proceso alguien")
+    #     else:
+    #         self.logger.error(f"❌ Estado de procesamiento inesperado: {processing_status}")
+
+    # def _handle_batch_processed(self, response):
+    #     self.logger.info(f"Respuesta recibida del aggregator: {response}")
+    #     joiner_instance_id = response.get("joiner_instance_id", '-1')
+    #     return joiner_instance_id != '-1'
+    
+    # def _handle_batch_processed_for_recover(self, response):
+    #     joiner_instance_id = response.get("joiner_instance_id", '-1')
+    #     return joiner_instance_id == self.joiner_instance_id
+
+    # def should_resolve_unfinished_transaction(self, batch_id):
+    #     control_message = {
+    #         "type": "batch_processed",
+    #         "batch_id": batch_id,
+    #     }        
+    #     formatted_message = self.format_message(control_message)
+    #     self.logger.info(f"Enviando mensaje de should_resolve_unfinished_transaction al aggregator: {batch_id}")
+    #     response = self.tcp_client.send_with_response(formatted_message, self._handle_batch_processed_for_recover)
+    #     if response is None:
+    #         self.logger.warning(f"⚠️ Batch {batch_id} fallo al preguntar al aggregator si ya lo procese yo")
+    #         return False
+    #     return response
 
 
 if __name__ == '__main__':

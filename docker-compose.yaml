@@ -73,6 +73,8 @@ services:
     - SERVICE_NAME=best_and_worst_ratings_aggregator
     links:
     - rabbitmq
+    ports:
+    - 60002:60002
   client_1:
     build:
       context: .
@@ -97,10 +99,10 @@ services:
     - HEARTBEAT_INTERVAL=2000
     - SERVICE_NAME=client_1
     volumes:
-    - ./files/short/movies_metadata.csv:/root/files/movies_metadata.csv
-    - ./files/short/credits.csv:/root/files/credits.csv
-    - ./files/short/ratings.csv:/root/files/ratings.csv
-    - ./results/short/results.json:/root/results/results.json
+    - ./files/long/movies_metadata.csv:/root/files/movies_metadata.csv
+    - ./files/long/credits.csv:/root/files/credits.csv
+    - ./files/long/ratings.csv:/root/files/ratings.csv
+    - ./results/long/results.json:/root/results/results.json
   client_decodifier:
     build:
       context: .
@@ -155,29 +157,6 @@ services:
     - MONITOR_PORTS=50001,50002,50003
     - HEARTBEAT_INTERVAL=2000
     - SERVICE_NAME=credits_joiner_1
-    image: credits_joiner:latest
-    links:
-    - rabbitmq
-  credits_joiner_2:
-    container_name: credits_joiner_2
-    depends_on:
-      monitor_1:
-        condition: service_started
-      monitor_2:
-        condition: service_started
-      monitor_3:
-        condition: service_started
-      rabbitmq:
-        condition: service_healthy
-      worker:
-        condition: service_started
-    environment:
-    - PYTHONUNBUFFERED=1
-    - LOG_LEVEL=INFO
-    - MONITOR_HOSTS=monitor_1,monitor_2,monitor_3
-    - MONITOR_PORTS=50001,50002,50003
-    - HEARTBEAT_INTERVAL=2000
-    - SERVICE_NAME=credits_joiner_2
     image: credits_joiner:latest
     links:
     - rabbitmq
@@ -421,33 +400,12 @@ services:
     - PYTHONUNBUFFERED=1
     - LOG_LEVEL=INFO
     - JOINER_INSTANCE_ID=ratings-1
+    - AGGREGATOR_HOST=best_and_worst_ratings_aggregator
+    - AGGREGATOR_PORT=60002
     - MONITOR_HOSTS=monitor_1,monitor_2,monitor_3
     - MONITOR_PORTS=50001,50002,50003
     - HEARTBEAT_INTERVAL=2000
     - SERVICE_NAME=ratings_joiner_1
-    image: ratings_joiner:latest
-    links:
-    - rabbitmq
-  ratings_joiner_2:
-    container_name: ratings_joiner_2
-    depends_on:
-      monitor_1:
-        condition: service_started
-      monitor_2:
-        condition: service_started
-      monitor_3:
-        condition: service_started
-      rabbitmq:
-        condition: service_healthy
-      worker:
-        condition: service_started
-    environment:
-    - PYTHONUNBUFFERED=1
-    - LOG_LEVEL=INFO
-    - MONITOR_HOSTS=monitor_1,monitor_2,monitor_3
-    - MONITOR_PORTS=50001,50002,50003
-    - HEARTBEAT_INTERVAL=2000
-    - SERVICE_NAME=ratings_joiner_2
     image: ratings_joiner:latest
     links:
     - rabbitmq

@@ -120,7 +120,7 @@ class AbstractAggregator(Worker):
 
     def delete_client(self, client_id):
         try:
-            self.logger.info(f" Se va a borrar el cliente {client_id} de  los clientes {self.results.keys()}")
+            self.logger.info(f"Se va a borrar el cliente {client_id} de  los clientes {self.results.keys()}")
             self.results.pop(client_id)
             self.total_batches_per_client.pop(client_id)
             self.received_batches_per_client.pop(client_id)
