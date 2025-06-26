@@ -155,14 +155,6 @@ class CreditsJoiner(AbstractAggregator):
             control_message["total_batches"] = total_batches
 
         self.credit_batch_processed.enqueue(control_message)
-        # try:
-        #     tcp_message = json.dumps(control_message) + '\n'
-        #     if self.tcp_client.send(tcp_message):
-        #         self.logger.info(f"Mensaje TCP enviado al aggregator: {control_message}")
-        #     else:
-        #         self.logger.error(f"Error enviando mensaje TCP al aggregator: {control_message}")
-        # except Exception as e:
-        #     self.logger.error(f"Excepción enviando mensaje TCP: {e}")
 
     def get_result(self, client_id):
         top_10 = sorted(self.results[client_id].items(), key=lambda item: item[1]["count"], reverse=True)
@@ -217,13 +209,11 @@ class CreditsJoiner(AbstractAggregator):
                                 self.logger.info(f"Batch {batch_id} ya procesado, se omite.")
                                 continue
 
-                            # self.handle_message(current_payload)
                             self.credits_producer.enqueue(current_payload)
                             # Reset
                             in_transaction = False
                             current_batch_id = None
                             current_payload = None
-                            # TODO si el archivo es invalido, deberiamos borrarlo
                 except json.JSONDecodeError as e:
                     self.logger.exception(f"Error decodificando JSON de batch {current_batch_id}: {e}")
                 except Exception as e:
@@ -233,7 +223,6 @@ class CreditsJoiner(AbstractAggregator):
         self.recheck_if_some_client_is_completed_after_restart()
 
     def persist_movies(self, client_id, movies):
-        # TODO hacer ack manual para Suscriber y ackearlo apenas se escriba en el archivo
         try:
             self.logger.info(f"Se va a intentar persistir el archivo de movies para el cliente {client_id}")
             movies_file = f"{client_id}{self.movies_name}"
@@ -263,7 +252,6 @@ class CreditsJoiner(AbstractAggregator):
                     # Validamos que sea un archivo valido, sino nos caimos guardando el archivo
                     if len(lines) != 2 or not lines[0].startswith("BEGIN_TRANSACTION;") or lines[1] != "END_TRANSACTION;":
                         self.logger.error(f"Formato inválido en archivo {filename}. Se omite.")
-                        # TODO si es invalido borrar el archivo
                         continue
 
                     raw_json = lines[0][len("BEGIN_TRANSACTION;"):]

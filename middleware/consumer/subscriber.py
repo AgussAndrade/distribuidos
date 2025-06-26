@@ -28,12 +28,9 @@ class Subscriber(threading.Thread):
 
     def _on_message(self, channel, method, properties, body):
         try:
-            timestamp = get_timestamp()
-            #logger.info(f"📥 Message received. Suscriber {self.queue_name} Timestamp: {timestamp}--------------")
             message = json.loads(body)
             self.message_handler(message)
             channel.basic_ack(delivery_tag=method.delivery_tag)
-            #logger.info(f"📥 Message acked. Queue {self.queue_name} Timestamp: {timestamp} ---------------")
         except json.JSONDecodeError as e:
             logger.error(f"❌ JSON decode error on queue consumer {self.exchange_name}: {e}")
             channel.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
@@ -44,10 +41,7 @@ class Subscriber(threading.Thread):
     def close(self):
         try:
             if self.connection and not self.connection.is_closed:
-                # self._connection.close()
-                # TODO revisar la liberacion de recursos. El connection close cierra la cola si esta en otro thread?
-                # TODO los threads daemon se cierran solos al cerrar el worker?
-                # self.channel_thread.stop()
+                self.connection.close()
                 logger.info("Connection closed successfully")
         except Exception as e:
             logger.error(f"Error closing connection: {e}")

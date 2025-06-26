@@ -160,7 +160,6 @@ class RatingsJoiner(AbstractAggregator):
             self.logger.exception(f"❌ Error al cerrar conexiones: {e}")
 
     def send_batch_processed(self, client_id, batch_id, batch_size, total_batches):
-        # TODO cuando me recupero, tengo que enviar el ultimo batch_id que persisti por si las dudas
         control_message = {
             "type": "control",
             "client_id": client_id,
@@ -243,7 +242,6 @@ class RatingsJoiner(AbstractAggregator):
                                 in_transaction = False
                                 current_batch_id = None
                                 current_payload = None
-                                # TODO si el archivo es invalido, deberiamos borrarlo
                     except json.JSONDecodeError as e:
                         self.logger.exception(f"Error decodificando JSON de batch {current_batch_id}: {e}")
                     except Exception as e:
@@ -283,7 +281,6 @@ class RatingsJoiner(AbstractAggregator):
             }
 
     def persist_movies(self, client_id, movies):
-        # TODO hacer ack manual para Suscriber y ackearlo apenas se escriba en el archivo
         try:
             self.logger.info(f"Se va a intentar persistir el archivo de movies para el cliente {client_id}")
             movies_file = f"{client_id}{self.movies_name}"
@@ -313,7 +310,6 @@ class RatingsJoiner(AbstractAggregator):
                     if len(lines) != 2 or not lines[0].startswith("BEGIN_TRANSACTION;") or lines[
                         1] != "END_TRANSACTION;":
                         self.logger.error(f"Formato inválido en archivo {filename}. Se omite.")
-                        # TODO si es invalido borrar el archivo
                         continue
 
                     raw_json = lines[0][len("BEGIN_TRANSACTION;"):]

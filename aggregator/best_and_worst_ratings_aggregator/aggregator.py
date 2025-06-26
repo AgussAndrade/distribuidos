@@ -46,10 +46,9 @@ class Aggregator(AbstractAggregator):
         ratings = message.get("ratings")
         partial_result = {}
         if message.get("client_id", None) not in self.results.keys():
-            self.logger
             batch_id = message["batch_id"]
             self.consumer.ack(batch_id)
-            return
+            return None
         for movie_id, data in ratings.items():
             self.logger.info(f"Procesando rating para la película {movie_id} del cliente {client_id}")
             if movie_id in partial_result:
@@ -247,7 +246,6 @@ class Aggregator(AbstractAggregator):
                             in_transaction = False
                             current_batch_id = None
                             current_payload = None
-                            # TODO si el archivo es invalido, deberiamos borrarlo
             except json.JSONDecodeError as e:
                 self.logger.exception(f"Error decodificando JSON de batch {current_batch_id}: {e}")
             except Exception as e:

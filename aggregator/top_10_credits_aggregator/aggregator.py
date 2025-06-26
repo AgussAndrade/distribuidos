@@ -69,7 +69,6 @@ class Aggregator(AbstractAggregator):
 
     def aggregate_message(self, client_id, actors):
         for _, count in actors:
-            #self.logger.info(f"Se va a aumentar la cantidad de registros de un actor: {count}: {type(count)}.")
             if client_id not in self.results:
                 self.results[client_id] = Counter()
             self.results[client_id][count["name"]] += count["count"]
@@ -96,7 +95,6 @@ class Aggregator(AbstractAggregator):
             self.logger.info(f"Se actualiza la cantidad total de batches: {self.received_batches_per_client[client_id]} para el cliente {client_id}.")
 
         for _, count in actors:
-            #self.logger.info(f"Se va a aumentar la cantidad de registros de un actor: {count}: {type(count)}.")
             self.results[client_id][count["name"]] += count["count"]
 
         total = self.total_batches_per_client.get(client_id, None)
@@ -147,7 +145,6 @@ class Aggregator(AbstractAggregator):
             self.logger.error(f"[TCP] Error procesando mensaje recibido: {e}")
 
     def close(self):
-        # TODO revisar close de estos aggregators
         self.logger.info("Cerrando conexiones del worker...")
         try:
             self.tcp_server.stop()
@@ -158,8 +155,6 @@ class Aggregator(AbstractAggregator):
             self.logger.error(f"Error al cerrar conexiones: {e}")
 
     def handle_control_message(self, message):
-        #Adquirir el lock por cliente de los mensajes de control
-        #responder si o no
         self.logger.info(f"Mensaje de control recibido: {message}")
         total_batches = message.get("total_batches", None)
         batch_size = message.get("batch_size")
@@ -182,7 +177,6 @@ class Aggregator(AbstractAggregator):
             self.logger.info(f"Se actualiza la cantidad total de batches:"
                              f"{self.total_batches_per_client[client_id]} para el cliente {client_id}.")
         self.consumer.ack(batch_id)
-        #Liberar el lock
         if client_id not in self.results:
             self.results[client_id] = Counter()
         total = self.total_batches_per_client.get(client_id, None)
@@ -260,7 +254,6 @@ class Aggregator(AbstractAggregator):
                             in_transaction = False
                             current_batch_id = None
                             current_payload = None
-                            # TODO si el archivo es invalido, deberiamos borrarlo
             except json.JSONDecodeError as e:
                 self.logger.exception(f"Error decodificando JSON de batch {current_batch_id}: {e}")
             except Exception as e:

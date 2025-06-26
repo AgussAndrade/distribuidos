@@ -18,14 +18,12 @@ class AbstractAggregator(Worker):
         self.results = results if results else {}
         self.producer = self.create_producer()
         # Es importante que se procese antes de comenzar a leer de nuevo
-        # TODO revisar el caso borde del ultimo batch si es que se vuelve de una recuperacion
         self.load_processed_batches()
         self.consumer = self.create_consumer()
 
     def close(self):
         self.logger.info("Cerrando conexiones del worker...")
         try:
-            # TODO borrar el log file
             self.consumer.close()
             self.producer.close()
             self.shutdown_consumer.close()
@@ -132,7 +130,6 @@ class AbstractAggregator(Worker):
             self.logger.warning(f"Archivo de log {log_file} no encontrado, no se puede eliminar.")
 
     def persist_result(self, client_id, batch_id, batch_size, total_batches, result) -> int:
-        # TODO Cada tanto crear un acumulado de log y borrar lo viejo
         log_file = f"{client_id}{self.results_log_name}"
         payload = {
             "client_id": client_id,
@@ -217,7 +214,6 @@ class AbstractAggregator(Worker):
                             in_transaction = False
                             current_batch_id = None
                             current_payload = None
-                            # TODO si el archivo es invalido, deberiamos borrarlo
                         line = next_line
                     if in_transaction:
                         self.resolve_unfinished_transaction(line, current_batch_id, current_payload)
@@ -276,7 +272,6 @@ class AbstractAggregator(Worker):
                 f"Resultado final enviado con {len(self.results[client_id])} películas al cliente {client_id}")
         else:
             self.logger.error(f"Error al enviar el resultado final en el cliente {client_id}")
-            # TODO No estamos considerando los casos con error de conexion, deberiamos?
 
     def resolve_unfinished_transaction(self, line, current_batch_id, current_payload):
         self.logger.info(f"Validando si finalizar la transaccion {current_batch_id}")

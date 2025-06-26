@@ -34,7 +34,6 @@ class ClientDecodifier(Worker):
 
     def process_connection(self, client_socket):
         metadata = None
-        total_batches = None
         client_id = None
 
         producers = {
@@ -65,7 +64,6 @@ class ClientDecodifier(Worker):
                     "type": metadata.type,
                     "cola": batch,
                     "batch_size": len(batch),
-                    # "total_batches": total_batches + len(batch) if is_last else 0,
                     "client_id": client_id,
                     "batch_id": self.generate_batch_id(client_id, metadata.type, total_batches, is_last),
                 }
