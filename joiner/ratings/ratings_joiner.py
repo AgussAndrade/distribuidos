@@ -319,56 +319,56 @@ class RatingsJoiner(AbstractAggregator):
         finally:
             self.close()
 
-    # def format_message(self, message):
-    #     if isinstance(message, dict):
-    #         return json.dumps(message) + '\n'
-    #     else:
-    #         return str(message) + '\n'
+    def format_message(self, message):
+        if isinstance(message, dict):
+            return json.dumps(message) + '\n'
+        else:
+            return str(message) + '\n'
 
-    # def handle_message(self, message):
-    #     batch_id = message.get("batch_id")
-    #     client_id = message.get("client_id")
+    def handle_message(self, message):
+        batch_id = message.get("batch_id")
+        client_id = message.get("client_id")
         
-    #     control_message = {
-    #         "type": "batch_processed",
-    #         "batch_id": batch_id,
-    #         "client_id": client_id,
-    #     }
+        control_message = {
+            "type": "batch_processed",
+            "batch_id": batch_id,
+            "client_id": client_id,
+        }
         
-    #     formatted_message = self.format_message(control_message)
-    #     self.logger.info(f"Enviando mensaje de batch_processed al aggregator: {control_message}")
-    #     processing_status = self.tcp_client.send_with_response(formatted_message, self._handle_batch_processed)
+        formatted_message = self.format_message(control_message)
+        self.logger.info(f"Enviando mensaje de batch_processed al aggregator: {control_message}")
+        processing_status = self.tcp_client.send_with_response(formatted_message, self._handle_batch_processed)
         
-    #     if processing_status is True:
-    #         self.consumer.ack(batch_id)
-    #     elif processing_status is False:
-    #         super().handle_message(message)
-    #     elif processing_status is None:
-    #         self.logger.warning(f"⚠️ Batch {batch_id} fallo al preguntar al aggregator si ya lo proceso alguien")
-    #     else:
-    #         self.logger.error(f"❌ Estado de procesamiento inesperado: {processing_status}")
+        if processing_status is True:
+            self.consumer.ack(batch_id)
+        elif processing_status is False:
+            super().handle_message(message)
+        elif processing_status is None:
+            self.logger.warning(f"⚠️ Batch {batch_id} fallo al preguntar al aggregator si ya lo proceso alguien")
+        else:
+            self.logger.error(f"❌ Estado de procesamiento inesperado: {processing_status}")
 
-    # def _handle_batch_processed(self, response):
-    #     self.logger.info(f"Respuesta recibida del aggregator: {response}")
-    #     joiner_instance_id = response.get("joiner_instance_id", '-1')
-    #     return joiner_instance_id != '-1'
+    def _handle_batch_processed(self, response):
+        self.logger.info(f"Respuesta recibida del aggregator: {response}")
+        joiner_instance_id = response.get("joiner_instance_id", '-1')
+        return joiner_instance_id != '-1'
     
-    # def _handle_batch_processed_for_recover(self, response):
-    #     joiner_instance_id = response.get("joiner_instance_id", '-1')
-    #     return joiner_instance_id == self.joiner_instance_id
+    def _handle_batch_processed_for_recover(self, response):
+        joiner_instance_id = response.get("joiner_instance_id", '-1')
+        return joiner_instance_id == self.joiner_instance_id
 
-    # def should_resolve_unfinished_transaction(self, batch_id):
-    #     control_message = {
-    #         "type": "batch_processed",
-    #         "batch_id": batch_id,
-    #     }        
-    #     formatted_message = self.format_message(control_message)
-    #     self.logger.info(f"Enviando mensaje de should_resolve_unfinished_transaction al aggregator: {batch_id}")
-    #     response = self.tcp_client.send_with_response(formatted_message, self._handle_batch_processed_for_recover)
-    #     if response is None:
-    #         self.logger.warning(f"⚠️ Batch {batch_id} fallo al preguntar al aggregator si ya lo procese yo")
-    #         return False
-    #     return response
+    def should_resolve_unfinished_transaction(self, batch_id):
+        control_message = {
+            "type": "batch_processed",
+            "batch_id": batch_id,
+        }        
+        formatted_message = self.format_message(control_message)
+        self.logger.info(f"Enviando mensaje de should_resolve_unfinished_transaction al aggregator: {batch_id}")
+        response = self.tcp_client.send_with_response(formatted_message, self._handle_batch_processed_for_recover)
+        if response is None:
+            self.logger.warning(f"⚠️ Batch {batch_id} fallo al preguntar al aggregator si ya lo procese yo")
+            return False
+        return response
 
 
 if __name__ == '__main__':

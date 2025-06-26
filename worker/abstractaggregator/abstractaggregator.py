@@ -52,12 +52,7 @@ class AbstractAggregator(Worker):
         if not batch_id:
             self.consumer.ack(batch_id)
             self.logger.error(f"Mensaje malformado: falta batch_id")
-
-        # if message.get("type") != "batch_result":
-        #
-        #     self.consumer.ack(batch_id)
-        #     return
-
+            
         if not client_id or batch_size is None:
             self.logger.error(f"Mensaje malformado: falta client_id o batch_size en batch {batch_id}")
             self.consumer.ack(batch_id)
@@ -352,7 +347,12 @@ class AbstractAggregator(Worker):
                     f.fileno())  # Flush al disco, no vaya a ser que todavia lo tengamos en ram. Hace falta si es que ya cerramos el file descriptor?
 
             self.logger.info(f"Archivo de log compactado exitosamente para el cliente {client_id}.")
-            os.remove(log_file)
+            
+            try:
+                os.remove(log_file)
+            except FileNotFoundError:
+                self.logger.warning(f"Archivo de log {log_file} no encontrado, no se puede eliminar.")  
+
             os.rename(log_file + "_compacted", log_file)
             self.fsync_dir()
 

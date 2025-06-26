@@ -38,9 +38,6 @@ class CreditsJoiner(AbstractAggregator):
             queue_type="direct")
 
         self.control_consumer = Subscriber("joiner_control_credits", message_handler=self.handle_control_message)
-        self.credits_producer = Producer(
-            queue_name="credits",
-            queue_type="direct")
 
         if self.has_recovered_at_least_once:
             self.consumer.start()

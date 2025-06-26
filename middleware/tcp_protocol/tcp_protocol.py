@@ -132,16 +132,14 @@ class TCPClient:
                 self._socket.settimeout(self.timeout)
                 self._socket.connect((self.host, self.port))
                 logger.info(f"[TCP Client] Conexión establecida con {self.host}:{self.port}")
-                
-                # Iniciar thread de escucha de respuestas
-                #self._start_response_listener()
                 return True
+
             except socket.gaierror as e:
                 logger.error(f"[TCP Client] Error de DNS: {e}. Host: {self.host}")
             except Exception as e:
                 logger.error(f"[TCP Client] Error conectando: {e}")
             
-            time.sleep(2) # Esperar antes de reintentar
+            time.sleep(3) # Esperar antes de reintentar
             
         self._socket = None
         logger.error(f"[TCP Client] No se pudo conectar tras {self.max_retries} intentos.")
