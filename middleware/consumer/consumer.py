@@ -33,7 +33,7 @@ class Consumer(threading.Thread):
                     host='rabbitmq',
                     connection_attempts=3,
                     retry_delay=5,
-                    heartbeat=30,
+                    heartbeat=240,
                     socket_timeout=30
                 )
             )
