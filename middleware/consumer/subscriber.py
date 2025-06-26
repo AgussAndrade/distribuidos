@@ -32,13 +32,14 @@ class Subscriber(threading.Thread):
             #logger.info(f"📥 Message received. Suscriber {self.queue_name} Timestamp: {timestamp}--------------")
             message = json.loads(body)
             self.message_handler(message)
+            channel.basic_ack(delivery_tag=method.delivery_tag)
             #logger.info(f"📥 Message acked. Queue {self.queue_name} Timestamp: {timestamp} ---------------")
         except json.JSONDecodeError as e:
             logger.error(f"❌ JSON decode error on queue consumer {self.exchange_name}: {e}")
-            channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+            channel.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
         except Exception as e:
             logger.error(f"❌ Error processing message on queue consumer {self.exchange_name}: {e}. body: {body}")
-            channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+            channel.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
     def close(self):
         try:
@@ -53,7 +54,7 @@ class Subscriber(threading.Thread):
 
     def run(self):
         logger.info(f"🟢 Starting fanout consumer '{self.queue_name}'")
-        self.channel.basic_consume(queue=self.queue_name, on_message_callback=self._on_message, auto_ack=True)
+        self.channel.basic_consume(queue=self.queue_name, on_message_callback=self._on_message, auto_ack=False)
         self.channel.start_consuming()
 
 def get_timestamp():

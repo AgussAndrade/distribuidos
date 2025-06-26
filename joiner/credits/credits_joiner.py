@@ -249,7 +249,8 @@ class CreditsJoiner(AbstractAggregator):
 
             client_id = filename.replace(f"{self.movies_name}", "")
             self.logger.info(f"Recuperando movies para cliente {client_id} desde {filename}")
-            self.results[client_id] = {}
+            if client_id not in self.results:
+                self.results[client_id] = {}
             try:
                 with open(filename, "r") as f:
                     lines = [line.strip() for line in f.readlines()]
