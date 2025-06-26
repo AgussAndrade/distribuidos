@@ -31,6 +31,7 @@ class Aggregator(AbstractAggregator):
         self.control_log_name = "_credits_control.log"
         self.recover_control_messages()
         self.batch_to_joiner = {}
+        self.credit_batch_processed = Consumer("credit_batch_processed", self.handle_credit_batch_processed)
 
     def create_consumer(self):
         return Consumer("top_10_actors_from_batch",
@@ -38,6 +39,15 @@ class Aggregator(AbstractAggregator):
 
     def create_producer(self):
         return Producer("result")
+    
+    def handle_credit_batch_processed(self, message):
+        batch_id = message.get("batch_id")
+        joiner_instance_id = message.get("joiner_instance_id")
+        joiner_instance_id_from_dic = self.batch_to_joiner.get(batch_id, None)
+        if joiner_instance_id_from_dic is None:
+            self.batch_to_joiner[batch_id] = joiner_instance_id
+        self.handle_control_message(message)
+        self.credit_batch_processed.ack(batch_id)
 
     def handle_message_joiner_aggregator(self, message):
         self.logger.info(f"Mensaje recibido en desde top_10_actors_from_batch")
@@ -195,6 +205,7 @@ class Aggregator(AbstractAggregator):
         
         tcp_thread = threading.Thread(target=self.tcp_server.start, daemon=True)
         tcp_thread.start()
+        self.credit_batch_processed.start()
         self.logger.info("TCP Server iniciado en thread separado")
         super().start()
 

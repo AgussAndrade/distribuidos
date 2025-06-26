@@ -120,7 +120,8 @@ class TCPClient:
     def connect(self):
         if self._socket:
             try:
-                self._socket.close()
+                return True
+                #self._socket.close()
             except Exception:
                 pass
         
@@ -138,7 +139,7 @@ class TCPClient:
             except Exception as e:
                 logger.error(f"[TCP Client] Error conectando: {e}")
             
-            time.sleep(3) # Esperar antes de reintentar
+            time.sleep(5 * attempt) # Esperar antes de reintentar
             
         self._socket = None
         logger.error(f"[TCP Client] No se pudo conectar tras {self.max_retries} intentos.")

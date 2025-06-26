@@ -38,7 +38,8 @@ class CreditsJoiner(AbstractAggregator):
         aggregator_port = int(os.getenv("AGGREGATOR_PORT", 60000))
         self.tcp_client = TCPClient(aggregator_host, aggregator_port)
         super().__init__()
-
+        self.credit_batch_processed = Producer(
+            queue_name="credit_batch_processed")
 
         self.recover_movies()
         self.movies_consumer = Subscriber("20_century_arg_result",
@@ -50,6 +51,7 @@ class CreditsJoiner(AbstractAggregator):
         self.control_consumer = Subscriber("joiner_control_credits", message_handler=self.handle_control_message)
 
         if self.has_recovered_at_least_once and self.consumer:
+            self.logger.info("se recupero mensajes de movies, se inicia el consumo de credits")
             self.consumer.start()
 
 
@@ -140,7 +142,7 @@ class CreditsJoiner(AbstractAggregator):
             self.logger.error(f"Error al cerrar conexiones: {e}")
 
     def send_batch_processed(self, client_id, batch_id, batch_size, total_batches):
-        # TODO cuando me recupero, tengo que enviar el ultimo batch_id que persisti por si las dudas
+
         control_message = {
             "type": "control",
             "client_id": client_id,
@@ -152,14 +154,15 @@ class CreditsJoiner(AbstractAggregator):
             self.logger.info(f"Se recibio la cantidad de batches {total_batches} para el cliente {client_id}.")
             control_message["total_batches"] = total_batches
 
-        try:
-            tcp_message = json.dumps(control_message) + '\n'
-            if self.tcp_client.send(tcp_message):
-                self.logger.info(f"Mensaje TCP enviado al aggregator: {control_message}")
-            else:
-                self.logger.error(f"Error enviando mensaje TCP al aggregator: {control_message}")
-        except Exception as e:
-            self.logger.error(f"Excepción enviando mensaje TCP: {e}")
+        self.credit_batch_processed.enqueue(control_message)
+        # try:
+        #     tcp_message = json.dumps(control_message) + '\n'
+        #     if self.tcp_client.send(tcp_message):
+        #         self.logger.info(f"Mensaje TCP enviado al aggregator: {control_message}")
+        #     else:
+        #         self.logger.error(f"Error enviando mensaje TCP al aggregator: {control_message}")
+        # except Exception as e:
+        #     self.logger.error(f"Excepción enviando mensaje TCP: {e}")
 
     def get_result(self, client_id):
         top_10 = sorted(self.results[client_id].items(), key=lambda item: item[1]["count"], reverse=True)
