@@ -38,9 +38,9 @@ class RatingsJoiner(AbstractAggregator):
         aggregator_host = os.getenv("AGGREGATOR_HOST", "best_and_worst_ratings_aggregator")
         aggregator_port = int(os.getenv("AGGREGATOR_PORT", 60002))
         self.tcp_client = TCPClient(aggregator_host, aggregator_port)
-        super().__init__()
-
         self.recover_movies()
+        super().__init__()
+    
         self.movies_consumer = Subscriber("20_century_arg_result",
                                           message_handler=self.handle_movies_message)
         self.ratings_producer = Producer(queue_name="ratings", queue_type="direct")
@@ -87,9 +87,16 @@ class RatingsJoiner(AbstractAggregator):
         if client_id not in self.results:
             self.results[client_id] = result
         else:
+
             for movie_id, data in result.items():
-                self.results[client_id][movie_id]["rating_sum"] += data["rating_sum"]
-                self.results[client_id][movie_id]["votes"] += data["votes"]
+                if movie_id not in self.results[client_id]:
+                    self.results[client_id][movie_id] = {
+                        "rating_sum": data["rating_sum"],
+                        "votes": data["votes"]
+                    }
+                else:
+                    self.results[client_id][movie_id]["rating_sum"] += data["rating_sum"]
+                    self.results[client_id][movie_id]["votes"] += data["votes"]
 
     def check_if_its_completed(self, client_id):
         pass

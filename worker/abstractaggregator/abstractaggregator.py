@@ -15,7 +15,7 @@ class AbstractAggregator(Worker):
         self.received_batches_per_client = defaultdict(int)
         self.processed_batch_ids = set()
         self.results_log_name = "_resultados.log"
-        self.results = {}
+        self.results = self.results if self.results else {}
         self.producer = self.create_producer()
         # Es importante que se procese antes de comenzar a leer de nuevo
         # TODO revisar el caso borde del ultimo batch si es que se vuelve de una recuperacion
@@ -38,7 +38,7 @@ class AbstractAggregator(Worker):
 
     def handle_message(self, message):
         batch_size = message.get("batch_size", None)
-        total_batches = message.get("total_batches", None)
+        total_batches = message.get("total_batches", None) or self.total_batches_per_client.get(message.get("client_id", None), None)
         client_id = message.get("client_id", None)
         batch_id = message.get("batch_id", None)
 
