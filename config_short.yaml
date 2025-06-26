@@ -20,35 +20,35 @@ client_decodifier:
 
 workers:
   twentieth_century:
-    count: 2
+    count: 1
     log_level: INFO
     kill: true
   main_movie:
-    count: 2
+    count: 1
     log_level: DEBUG
     kill: true
   esp_production:
-    count: 2
+    count: 1
     log_level: INFO
     kill: true
   no_colab_productions:
-    count: 2
+    count: 1
     log_level: INFO
     kill: true
   sentiment:
-    count: 2
+    count: 1
     log_level: INFO
     kill: true
   arg_production:
-    count: 2
+    count: 1
     log_level: INFO
     kill: true
   credits:
-    count: 2
+    count: 1
     log_level: INFO
     kill: true
   ratings:
-    count: 2
+    count: 1
     log_level: INFO
     kill: true
 
