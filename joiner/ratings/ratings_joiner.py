@@ -79,6 +79,8 @@ class RatingsJoiner(AbstractAggregator):
         with open(pending_file, "a") as f:
             f.write(f"BEGIN_TRANSACTION;{batch_id};{json.dumps(message)}\n")
             f.write(f"END_TRANSACTION;{batch_id}\n")
+            f.flush()
+            os.fsync(f.fileno())
 
     def aggregate_message(self, client_id, result):
         self.logger.info(f"Agregando resultados para el cliente {client_id}. Resultados: {result}")
@@ -277,6 +279,8 @@ class RatingsJoiner(AbstractAggregator):
             with open(movies_file, "w") as f:
                 f.write(f"BEGIN_TRANSACTION;{json.dumps(movies)}\n")
                 f.write(f"END_TRANSACTION;\n")
+                f.flush()
+                os.fsync(f.fileno())
                 self.logger.info(f"Se persistio el archivo de movies para el cliente {client_id}")
         except Exception:
             self.logger.exception(f"Error al intentar persistir el archivo de movies para el cliente {client_id}")

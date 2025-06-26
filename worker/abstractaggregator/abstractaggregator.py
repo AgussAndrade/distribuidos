@@ -149,6 +149,8 @@ class AbstractAggregator(Worker):
         with open(log_file, "a") as f:
             f.write(f"BEGIN_TRANSACTION;{batch_id};{json.dumps(payload)}\n")
             f.write(f"END_TRANSACTION;{batch_id}\n")
+            f.flush()
+            os.fsync(f.fileno())
             # Hago el chequeo aca porque ya tengo el file descriptor abierto
             return os.fstat(f.fileno()).st_size
 
@@ -343,8 +345,9 @@ class AbstractAggregator(Worker):
                     payload["total_batches"] = total_batches
                 f.write(f"BEGIN_TRANSACTION;{compacted_batch_id};{json.dumps(payload)}\n")
                 f.write(f"END_TRANSACTION;{compacted_batch_id}\n")
-                os.fsync(
-                    f.fileno())  # Flush al disco, no vaya a ser que todavia lo tengamos en ram. Hace falta si es que ya cerramos el file descriptor?
+                f.flush()
+                os.fsync(f.fileno())
+                # Flush al disco, no vaya a ser que todavia lo tengamos en ram. Hace falta si es que ya cerramos el file descriptor?
 
             self.logger.info(f"Archivo de log compactado exitosamente para el cliente {client_id}.")
             

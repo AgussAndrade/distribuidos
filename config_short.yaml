@@ -9,7 +9,7 @@ monitors:
   heartbeat_interval: 2000      # 2 segundos
   heartbeat_timeout: 8000       # 8 segundos
   election_timeout: 5000        # 5 segundos
-  kill: true
+  kill: false
 
 clients:
   - id: 1
@@ -22,62 +22,62 @@ workers:
   twentieth_century:
     count: 1
     log_level: INFO
-    kill: true
+    kill: false
   main_movie:
     count: 1
     log_level: DEBUG
-    kill: true
+    kill: false
   esp_production:
     count: 1
     log_level: INFO
-    kill: true
+    kill: false
   no_colab_productions:
-    count: 1
+    count: 0
     log_level: INFO
-    kill: true
+    kill: false
   sentiment:
-    count: 1
+    count: 0
     log_level: INFO
-    kill: true
+    kill: false
   arg_production:
     count: 1
     log_level: INFO
-    kill: true
+    kill: false
   credits:
     count: 1
     log_level: INFO
     kill: true
   ratings:
-    count: 1
+    count: 0
     log_level: INFO
-    kill: true
+    kill: false
 
 aggregators:
   twentieth_century_arg_esp:
     generate: true
     log_level: INFO
-    kill: true
+    kill: false
   twentieth_century_arg:
     generate: true
     log_level: INFO
-    kill: true
+    kill: false
   top_5_countries:
-    generate: true
+    generate: false
     log_level: INFO
-    kill: true
+    kill: false
   top_10_credits:
     generate: true
     log_level: INFO
-    kill: true
+    kill: false
   best_and_worst_ratings:
-    generate: true
+    generate: false
     log_level: INFO
-    kill: true
+    kill: false
   sentiment:
     generate: false
     log_level: INFO
-    kill: true
+    kill: false
 
 test:
-  random: true
-  interval: 11
+  random: false
+  interval: 1

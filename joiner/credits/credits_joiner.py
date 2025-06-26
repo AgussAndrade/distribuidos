@@ -75,6 +75,8 @@ class CreditsJoiner(AbstractAggregator):
         with open(pending_file, "a") as f:
             f.write(f"BEGIN_TRANSACTION;{batch_id};{json.dumps(message)}\n")
             f.write(f"END_TRANSACTION;{batch_id}\n")
+            f.flush()
+            os.fsync(f.fileno())
 
     def aggregate_message(self, client_id, result):
         if client_id not in self.results:
@@ -233,6 +235,8 @@ class CreditsJoiner(AbstractAggregator):
             with open(movies_file, "w") as f:
                 f.write(f"BEGIN_TRANSACTION;{json.dumps(movies)}\n")
                 f.write(f"END_TRANSACTION;\n")
+                f.flush()
+                os.fsync(f.fileno())
                 self.logger.info(f"Se persistio el archivo de movies para el cliente {client_id}")
         except Exception:
             self.logger.exception(f"Error al intentar persistir el archivo de movies para el cliente {client_id}")
@@ -328,6 +332,7 @@ class CreditsJoiner(AbstractAggregator):
     
     def _handle_batch_processed_for_recover(self, response):
         joiner_instance_id = response.get("joiner_instance_id", '-1')
+        self.logger.info(f"Respuesta recibida del aggregator para recover: {joiner_instance_id}")
         return joiner_instance_id == self.joiner_instance_id
 
     def should_resolve_unfinished_transaction(self, batch_id):
