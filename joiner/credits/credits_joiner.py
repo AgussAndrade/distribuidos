@@ -127,8 +127,10 @@ class CreditsJoiner(AbstractAggregator):
         self.logger.info("Cerrando conexiones del worker...")
         try:
             self.movies_consumer.close()
-            self.consumer.close()
-            self.producer.close()
+            if self.consumer:
+                self.consumer.close()
+            if self.producer:
+                self.producer.close()
             self.credits_producer.close()
             if self.tcp_client:
                 self.tcp_client.close()
@@ -316,7 +318,8 @@ class CreditsJoiner(AbstractAggregator):
         processing_status = self.tcp_client.send_with_response(formatted_message, self._handle_batch_processed)
         
         if processing_status is True:
-            self.consumer.ack(batch_id)
+            if self.consumer:
+                self.consumer.ack(batch_id)
 
         elif processing_status is False:
             super().handle_message(message)

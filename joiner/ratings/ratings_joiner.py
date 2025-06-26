@@ -138,10 +138,12 @@ class RatingsJoiner(AbstractAggregator):
         self.logger.info("Cerrando conexiones del worker...")
         try:
             self.movies_consumer.close()
-            self.consumer.close()
-            self.producer.close()
-            self.producer.close()
-            self.shutdown_consumer.close()
+            if self.consumer:
+                self.consumer.close()
+            if self.producer:
+                self.producer.close()
+            if self.shutdown_consumer:
+                self.shutdown_consumer.close()
             self.control_consumer.close()
             self.ratings_producer.close()
             if self.tcp_client:
@@ -161,7 +163,8 @@ class RatingsJoiner(AbstractAggregator):
         if total_batches is not None:
             control_message["total_batches"] = total_batches
         # Enviar por tcp
-        self.producer.enqueue(control_message)
+        if self.producer:
+            self.producer.enqueue(control_message)
         self.logger.info(f"Control enviado al aggregator: {control_message}")
 
     def get_result(self, client_id):
@@ -347,7 +350,8 @@ class RatingsJoiner(AbstractAggregator):
         processing_status = self.tcp_client.send_with_response(formatted_message, self._handle_batch_processed)
         
         if processing_status is True:
-            self.consumer.ack(batch_id)
+            if self.consumer:
+                self.consumer.ack(batch_id)
         elif processing_status is False:
             super().handle_message(message)
         elif processing_status is None:

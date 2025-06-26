@@ -177,6 +177,8 @@ class Aggregator(AbstractAggregator):
             self.results[client_id] = Counter()
         total = self.total_batches_per_client.get(client_id, None)
         received = self.control_received_batches_per_client.get(client_id, 0)
+
+        self.logger.info(f"Total: {total}, Received: {received}")
         if total is not None and total <= received:
             self.logger.info(f"Se proceso el cliente {client_id}: ({received}/{total}), enviando request de resultados parciales.")
             message = {

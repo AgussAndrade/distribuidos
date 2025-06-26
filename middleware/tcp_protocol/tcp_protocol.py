@@ -205,32 +205,57 @@ class TCPClient:
             logger.error(f"[TCP Client] Error procesando respuesta: {e}")
 
     def send_with_response(self, message, callback):
-        """Envía mensaje y espera respuesta. El callback debe ser una función que reciba un diccionario."""
-        try:
-            # Iniciar el listener de respuestas si es la primera vez que se invoca
-            # if not self._listener_started:
-            #     self._start_response_listener()
-            #     self._listener_started = True
-            
-            self.send(message)
-            buffer = ""
-            #data = self._socket.recv(1024)
-            while True:
-                data = self._socket.recv(1024)
-                if not data:
-                    break
-                buffer += data.decode('utf-8')
-                if '\n' in buffer:
-                    message_end = buffer.find('\n')
-                    complete_message = buffer[:message_end]
-                    buffer = buffer[message_end + 1:]
-                    if complete_message.strip():
-                        return callback(json.loads(complete_message))
-            return None
-                
-        except Exception as e:
-            logger.error(f"[TCP Client] Error en send_with_response: {e}")
-            return None
+        while True:
+            try:
+                if not self._socket:
+                    logger.info(f"[TCP Client] Intentando conectar a {self.host}:{self.port} para enviar mensaje")
+                    if not self.connect():
+                        logger.warning(f"[TCP Client] No se pudo conectar a {self.host}:{self.port}, reintentando en 3 segundos...")
+                        time.sleep(3)
+                        continue
+
+                if not self.send(message):
+                    logger.warning(f"[TCP Client] Error enviando mensaje, reintentando conexión...")
+                    continue
+
+                buffer = ""
+                while True:
+                    try:
+                        if not self._socket:
+                            logger.warning(f"[TCP Client] Socket perdido, reintentando conexión...")
+                            break
+
+                        data = self._socket.recv(1024)
+                        if not data:
+                            logger.warning(f"[TCP Client] Conexión cerrada por el servidor, reintentando...")
+                            self._socket = None
+                            break
+
+                        buffer += data.decode('utf-8')
+                        if '\n' in buffer:
+                            message_end = buffer.find('\n')
+                            complete_message = buffer[:message_end]
+                            buffer = buffer[message_end + 1:]
+                            if complete_message.strip():
+                                return callback(json.loads(complete_message))
+                    except socket.timeout:
+                        continue
+                    except (ConnectionResetError, BrokenPipeError):
+                        logger.warning(f"[TCP Client] Conexión perdida, reintentando...")
+                        self._socket = None
+                        break
+                    except Exception as e:
+                        logger.error(f"[TCP Client] Error recibiendo respuesta: {e}")
+                        self._socket = None
+                        break
+
+                continue
+
+            except Exception as e:
+                logger.error(f"[TCP Client] Error en send_with_response: {e}")
+                self._socket = None
+                time.sleep(3)  # Esperar antes de reintentar
+                continue
 
     def send(self, message):
         if not self._socket:
