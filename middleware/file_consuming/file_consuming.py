@@ -265,7 +265,7 @@ class CSVReceiver:
                         logger.debug(f"Progreso de {name}: {line_count} líneas recibidas")
                         last_log_time = current_time
 
-                    if len(current_batch) >= 1000:
+                    if len(current_batch) >= 10000:
                         yield client_id, current_batch, False, metadata
                         current_batch = []
 

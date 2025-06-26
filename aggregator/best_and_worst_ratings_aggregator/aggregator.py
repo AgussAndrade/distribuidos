@@ -32,9 +32,7 @@ class Aggregator(AbstractAggregator):
         return Producer("result")
 
     def handle_message_joiner_aggregator(self, message):
-        self.logger.info(f"Mensaje recibido en desde best_and_worst_ratings_partial_result")
         type_of_message = message.get("type")
-        self.logger.info(f"Tipo de mensaje recibido: {type_of_message}")
         if type_of_message == "query_3_arg_2000_ratings":
             self.handle_message(message)
         elif type_of_message == "control":
@@ -50,7 +48,6 @@ class Aggregator(AbstractAggregator):
             self.consumer.ack(batch_id)
             return None
         for movie_id, data in ratings.items():
-            self.logger.info(f"Procesando rating para la película {movie_id} del cliente {client_id}")
             if movie_id in partial_result:
                 partial_result[movie_id]["rating_sum"] += float(data.get("rating_sum", 0))
                 partial_result[movie_id]["votes"] += int(data.get("votes", 0))
