@@ -33,12 +33,12 @@ class CreditsJoiner(AbstractAggregator):
         self.movies_name = "_credits_movies.json"
         self.pending_file = "_credits_pending.json"
         self.movies = {}
-        
-        super().__init__()
-        
+
         aggregator_host = os.getenv("AGGREGATOR_HOST", "top_10_credits_aggregator")
         aggregator_port = int(os.getenv("AGGREGATOR_PORT", 60000))
         self.tcp_client = TCPClient(aggregator_host, aggregator_port)
+        super().__init__()
+
 
         self.recover_movies()
         self.movies_consumer = Subscriber("20_century_arg_result",
@@ -77,6 +77,8 @@ class CreditsJoiner(AbstractAggregator):
             f.write(f"END_TRANSACTION;{batch_id}\n")
 
     def aggregate_message(self, client_id, result):
+        if client_id not in self.results:
+            self.results[client_id] = {}
         for actor_id, actor_data in result.items():
             actor_id = str(actor_id)
             if actor_id not in self.results[client_id]:

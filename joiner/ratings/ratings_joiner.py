@@ -35,12 +35,11 @@ class RatingsJoiner(AbstractAggregator):
         self.pending_file = "_ratings_pending.json"
         self.movies = {}
 
-        super().__init__()
-
         aggregator_host = os.getenv("AGGREGATOR_HOST", "best_and_worst_ratings_aggregator")
         aggregator_port = int(os.getenv("AGGREGATOR_PORT", 60002))
         self.tcp_client = TCPClient(aggregator_host, aggregator_port)
-        
+        super().__init__()
+
         self.recover_movies()
         self.movies_consumer = Subscriber("20_century_arg_result",
                                           message_handler=self.handle_movies_message)

@@ -115,8 +115,7 @@ class TCPClient:
         self._response_callbacks = {}  # Para manejar respuestas asíncronas
         self._response_thread = None
         self._running = False
-        self._listener_started = False  # Flag para trackear si el listener ya fue iniciado
-        self.connect()
+        self._listener_started = False 
 
     def connect(self):
         if self._socket:
