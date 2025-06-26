@@ -38,8 +38,9 @@ class RatingsJoiner(AbstractAggregator):
         aggregator_host = os.getenv("AGGREGATOR_HOST", "best_and_worst_ratings_aggregator")
         aggregator_port = int(os.getenv("AGGREGATOR_PORT", 60002))
         self.tcp_client = TCPClient(aggregator_host, aggregator_port)
+        self.results = {}
         self.recover_movies()
-        super().__init__()
+        super().__init__(self.results)
     
         self.movies_consumer = Subscriber("20_century_arg_result",
                                           message_handler=self.handle_movies_message)
@@ -320,7 +321,7 @@ class RatingsJoiner(AbstractAggregator):
                     self.set_movies_for_client(client_id, movies)
                     self.has_recovered_at_least_once = True
                     self.logger.info(
-                        f"Películas recuperadas para cliente {client_id}: {len(self.movies[client_id])} items.")
+                        f"Películas recuperadas para cliente {client_id}: {len(self.results[client_id])} items.")
 
             except json.JSONDecodeError as e:
                 self.logger.exception(f"Error decodificando JSON en archivo {filename}: {e}")

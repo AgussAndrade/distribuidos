@@ -8,14 +8,14 @@ from worker.worker import Worker
 
 
 class AbstractAggregator(Worker):
-    def __init__(self):
+    def __init__(self, results=None):
         super().__init__()
         self.max_file_size = 100 * 1024  # 1kB masomenos
         self.total_batches_per_client = defaultdict(int)
         self.received_batches_per_client = defaultdict(int)
         self.processed_batch_ids = set()
         self.results_log_name = "_resultados.log"
-        self.results = self.results if self.results else {}
+        self.results = results if results else {}
         self.producer = self.create_producer()
         # Es importante que se procese antes de comenzar a leer de nuevo
         # TODO revisar el caso borde del ultimo batch si es que se vuelve de una recuperacion
