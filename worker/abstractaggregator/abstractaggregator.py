@@ -83,8 +83,8 @@ class AbstractAggregator(Worker):
             self.consumer.ack(batch_id)
             return
         current_file_size = self.persist_result(client_id, batch_id, batch_size, total_batches, result)
-        self.consumer.ack(batch_id)
         self.send_batch_processed(client_id, batch_id, batch_size, total_batches)
+        self.consumer.ack(batch_id)
         self.aggregate_message(client_id, result)
         self.processed_batch_ids.add(batch_id)
 

@@ -245,7 +245,7 @@ class CreditsJoiner(AbstractAggregator):
 
             client_id = filename.replace(f"{self.movies_name}", "")
             self.logger.info(f"Recuperando movies para cliente {client_id} desde {filename}")
-
+            self.results[client_id] = {}
             try:
                 with open(filename, "r") as f:
                     lines = [line.strip() for line in f.readlines()]
@@ -260,6 +260,7 @@ class CreditsJoiner(AbstractAggregator):
                     movies = json.loads(raw_json)
 
                     self.movies[client_id] = movies
+                    
                     self.has_recovered_at_least_once = True
                     self.logger.info(f"Películas recuperadas para cliente {client_id}: {len(self.movies[client_id])} items.")
 
