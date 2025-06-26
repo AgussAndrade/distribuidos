@@ -627,7 +627,7 @@ class MonitorCluster:
                                     del self.services[name]
                             
                             # NUEVO: Dar más tiempo para el primer heartbeat
-                            initial_timeout = 20000  # 10 segundos para el primer heartbeat
+                            initial_timeout = 20000  # 20 segundos para el primer heartbeat
                             for service_name in self.expected_services:
                                 if service_name not in self.services:
                                     start_time = self.service_start_times.get(service_name)
@@ -676,8 +676,9 @@ class MonitorCluster:
                     logger.error(f"❌ Error reiniciando {container.name}: {e}")
             
             with self.lock:
-                self.services[name] = time.time() * 1000
-            logger.info(f"✅ Servicio {name} marcado como saludable después de intentar reiniciar")
+                now = time.time() * 1000
+                additional_delay = 60000 if "sentiment" in name.lower() else 30000
+                self.services[name] = now + additional_delay
                 
         except Exception as e:
             logger.error(f"❌ Error reiniciando {name}: {e}")

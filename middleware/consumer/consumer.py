@@ -33,7 +33,7 @@ class Consumer(threading.Thread):
                     host='rabbitmq',
                     connection_attempts=3,
                     retry_delay=5,
-                    heartbeat=240,
+                    heartbeat=30,
                     socket_timeout=30
                 )
             )
@@ -111,6 +111,7 @@ class Consumer(threading.Thread):
         logger.info("🟢 Waiting for messages...")
         try:
             self._channel.start_consuming()
+            logger.info("termino consumir")
         except Exception as e:
             logger.exception(f"Error during consuming: {e}")
             self.close()
