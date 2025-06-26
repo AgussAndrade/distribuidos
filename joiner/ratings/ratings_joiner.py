@@ -16,36 +16,39 @@ PENDING_MESSAGES = "/root/files/ratings_pending.jsonl"
 
 
 class RatingsJoiner(AbstractAggregator):
+    def create_consumer(self):
+        return Consumer("ratings", _message_handler=self.handle_message)
+
+    def create_producer(self):
+        return Producer("best_and_worst_ratings_partial_result")
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         logging.basicConfig(
             format='%(asctime)s %(levelname)-8s %(message)s',
             level=logging.DEBUG,
             datefmt='%H:%M:%S')
+
+        self.joiner_instance_id = os.environ.get("JOINER_INSTANCE_ID", "joiner_ratings")
         self.has_recovered_at_least_once = False
         self.movies_name = "_ratings_movies.json"
         self.pending_file = "_ratings_pending.json"
-        self.joiner_instance_id = os.environ.get("JOINER_INSTANCE_ID", "joiner_ratings")
+        self.movies = {}
+
         super().__init__()
 
         aggregator_host = os.getenv("AGGREGATOR_HOST", "best_and_worst_ratings_aggregator")
         aggregator_port = int(os.getenv("AGGREGATOR_PORT", 60002))
         self.tcp_client = TCPClient(aggregator_host, aggregator_port)
         
-        self.movies = {}
         self.recover_movies()
         self.movies_consumer = Subscriber("20_century_arg_result",
                                           message_handler=self.handle_movies_message)
         self.ratings_producer = Producer(queue_name="ratings", queue_type="direct")
         self.control_consumer = Subscriber("joiner_control_ratings", message_handler=self.handle_control_message)
-        if self.has_recovered_at_least_once:
+
+        if self.has_recovered_at_least_once and self.consumer:
             self.consumer.start()
-
-    def create_consumer(self):
-        return Consumer("ratings", _message_handler=self.handle_message)
-
-    def create_producer(self):
-        return Producer("best_and_worst_ratings_partial_result")
 
     def process_message(self, client_id, message):
         if client_id not in self.results:
@@ -103,7 +106,8 @@ class RatingsJoiner(AbstractAggregator):
         self.logger.info(f"Mensaje de control recibido: {message}")
         client_id = message["client_id"]
         result_message = self.create_final_result(client_id)
-        self.producer.enqueue(result_message)
+        if self.producer:
+            self.producer.enqueue(result_message)
         self.logger.info(f"Resultado enviado {result_message}.")
         self.clean_client(client_id)
 
@@ -237,7 +241,7 @@ class RatingsJoiner(AbstractAggregator):
 
             self.recheck_if_some_client_is_completed_after_restart()
             self.logger.info(f"{len(self.results[client_id])} películas guardadas para {client_id}")
-            if not self.consumer.is_alive():
+            if self.consumer and not self.consumer.is_alive():
                 self.consumer.start()
                 self.logger.info("Thread de consumo de ratings empezado")
             else:

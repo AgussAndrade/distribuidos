@@ -15,21 +15,31 @@ PENDING_MESSAGES = "/root/files/credits_pending.jsonl"
 
 
 class CreditsJoiner(AbstractAggregator):
+    def create_consumer(self):
+        return Consumer("credits", _message_handler=self.handle_message)
+
+    def create_producer(self):
+        return Producer("top_10_actors_from_batch")
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         logging.basicConfig(
             format='%(asctime)s %(levelname)-8s %(message)s',
             level=logging.DEBUG,
             datefmt='%H:%M:%S')
-        aggregator_host = os.getenv("AGGREGATOR_HOST", "top_10_credits_aggregator")
-        aggregator_port = int(os.getenv("AGGREGATOR_PORT", 60000))
-        self.tcp_client = TCPClient(aggregator_host, aggregator_port)
+        
         self.joiner_instance_id = os.environ.get("JOINER_INSTANCE_ID", "joiner_credits")
-        super().__init__()
         self.has_recovered_at_least_once = False
         self.movies_name = "_credits_movies.json"
         self.pending_file = "_credits_pending.json"
         self.movies = {}
+        
+        super().__init__()
+        
+        aggregator_host = os.getenv("AGGREGATOR_HOST", "top_10_credits_aggregator")
+        aggregator_port = int(os.getenv("AGGREGATOR_PORT", 60000))
+        self.tcp_client = TCPClient(aggregator_host, aggregator_port)
+
         self.recover_movies()
         self.movies_consumer = Subscriber("20_century_arg_result",
                                           message_handler=self.handle_movies_message)
@@ -39,15 +49,9 @@ class CreditsJoiner(AbstractAggregator):
 
         self.control_consumer = Subscriber("joiner_control_credits", message_handler=self.handle_control_message)
 
-        if self.has_recovered_at_least_once:
+        if self.has_recovered_at_least_once and self.consumer:
             self.consumer.start()
 
-
-    def create_consumer(self):
-        return Consumer("credits", _message_handler=self.handle_message)
-
-    def create_producer(self):
-        return Producer("top_10_actors_from_batch")
 
     def process_message(self, client_id, message):
         if client_id not in self.results:
@@ -166,7 +170,7 @@ class CreditsJoiner(AbstractAggregator):
         self.results[client_id] = {}
         self.recover_pending_messages()
 
-        if not self.consumer.is_alive():
+        if self.consumer and not self.consumer.is_alive():
             self.consumer.start()
             self.logger.info("Thread de consumo de credits empezado")
         else:
@@ -262,30 +266,6 @@ class CreditsJoiner(AbstractAggregator):
             except Exception as e:
                 self.logger.exception(f"Error al intentar recuperar películas desde archivo {filename}: {e}")
 
-    # def _handle_aggregator_response(self, response):
-    #     try:
-    #         response_type = response.get("type")
-    #         batch_id = response.get("batch_id")
-    #         joiner_instance_id = response.get("joiner_instance_id")
-    #         client_id = response.get("client_id")
-
-    #         if response_type == "control_ack":
-    #             self.logger.info(f"✅ Batch {batch_id} confirmado por el aggregator")
-    #             if joiner_instance_id:
-    #                 self.consumer.ack(batch_id)
-    #             #else:
-
-    #                 #result_message = self.create_final_result(client_id)
-    #                 #self.producer.enqueue(result_message)
-    #                 #self.logger.info(f"Resultado enviado {result_message}.")
-    #                 #self.results.pop(client_id)
-    #         else:
-    #             self.logger.warning(f"⚠️ Respuesta inesperada del aggregator: {response}")
-
-    #     except Exception as e:
-    #         self.logger.error(f"❌ Error procesando respuesta del aggregator: {e}")
-
-
     def handle_control_message(self, message):
         self.logger.info(f"Mensaje de control recibido: {message}")
         client_id = message.get("client_id")
@@ -293,9 +273,10 @@ class CreditsJoiner(AbstractAggregator):
             self.logger.info(f"Batch {message.get('batch_id')} confirmado por el aggregator")
             
             result_message = self.create_final_result(client_id)
-            self.producer.enqueue(result_message)
+            if self.producer:
+                self.producer.enqueue(result_message)
             self.logger.info(f"Resultado enviado {result_message}.")
-            self.clean_client()
+            self.clean_client(client_id)
 
 
     def start(self):

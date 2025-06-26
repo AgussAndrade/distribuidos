@@ -1,6 +1,7 @@
 from collections import defaultdict
 import os
 import json
+import threading
 from middleware.consumer.consumer import Consumer
 from middleware.producer.producer import Producer
 from middleware.producer.publisher import Publisher
@@ -189,7 +190,10 @@ class Aggregator(AbstractAggregator):
                 os.remove(control_log_filename)
     def start(self):
         self.logger.info("Iniciando agregador")
-        self.tcp_server.start()
+        
+        tcp_thread = threading.Thread(target=self.tcp_server.start, daemon=True)
+        tcp_thread.start()
+        self.logger.info("TCP Server iniciado en thread separado")
         super().start()
 
     def persist_control_message(self, client_id, batch_id, joiner_id, batch_size, total_batches):

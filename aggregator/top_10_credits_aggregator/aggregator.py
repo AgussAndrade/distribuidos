@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import threading
 from collections import Counter, defaultdict
 
 from middleware.consumer.consumer import Consumer
@@ -121,15 +122,6 @@ class Aggregator(AbstractAggregator):
                 joiner_instance_id_from_dic = self.batch_to_joiner.get(batch_id, None)
                 if joiner_instance_id_from_dic is None:
                     self.batch_to_joiner[batch_id] = joiner_instance_id
-
-                # response_data = {
-                #     "type": "control_ack",
-                #     "batch_id": batch_id,
-                #     "joiner_instance_id": joiner_instance_id_from_dic,
-                #     "client_id": client_id
-                # }
-
-                # self.tcp_server.send_response(addr, response_data)
                 self.handle_control_message(data_json)
 
             elif message_type == "batch_processed": #consulta del joiner cuando arranca para saber si ya proceso el batch
@@ -198,7 +190,10 @@ class Aggregator(AbstractAggregator):
 
     def start(self):
         self.logger.info("Iniciando agregador")
-        self.tcp_server.start()
+        
+        tcp_thread = threading.Thread(target=self.tcp_server.start, daemon=True)
+        tcp_thread.start()
+        self.logger.info("TCP Server iniciado en thread separado")
         super().start()
 
     def persist_control_message(self, client_id, batch_id, joiner_id, batch_size, total_batches):
