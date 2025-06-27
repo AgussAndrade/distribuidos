@@ -43,10 +43,6 @@ class Aggregator(AbstractAggregator):
     def process_message(self, client_id, message):
         ratings = message.get("ratings")
         partial_result = {}
-        if message.get("client_id", None) not in self.results.keys():
-            batch_id = message["batch_id"]
-            self.consumer.ack(batch_id)
-            return None
         for movie_id, data in ratings.items():
             if movie_id in partial_result:
                 partial_result[movie_id]["rating_sum"] += float(data.get("rating_sum", 0))
