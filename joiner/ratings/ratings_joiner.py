@@ -169,7 +169,7 @@ class RatingsJoiner(AbstractAggregator):
         }
         if total_batches is not None:
             control_message["total_batches"] = total_batches
-        # Enviar por tcp
+
         if self.producer:
             self.producer.enqueue(control_message)
         self.logger.info(f"Control enviado al aggregator: {control_message}")
@@ -236,9 +236,7 @@ class RatingsJoiner(AbstractAggregator):
                                     self.logger.info(f"Batch {batch_id} ya procesado, se omite.")
                                     continue
 
-                                # self.handle_message(current_payload)
                                 self.ratings_producer.enqueue(current_payload)
-                                # Reset
                                 in_transaction = False
                                 current_batch_id = None
                                 current_payload = None
@@ -306,7 +304,6 @@ class RatingsJoiner(AbstractAggregator):
                 with open(filename, "r") as f:
                     lines = [line.strip() for line in f.readlines()]
 
-                    # Validamos que sea un archivo valido, sino nos caimos guardando el archivo
                     if len(lines) != 2 or not lines[0].startswith("BEGIN_TRANSACTION;") or lines[
                         1] != "END_TRANSACTION;":
                         self.logger.error(f"Formato inválido en archivo {filename}. Se omite.")

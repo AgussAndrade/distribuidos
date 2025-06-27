@@ -9,42 +9,32 @@ import random
 def build_whitelist(config):
     whitelist = set()
 
-    # # Lista de workers en la configuracion
-    # for name, data in config.get("workers", {}).items():
-    #     if data.get("kill", False):
-    #         whitelist.add(f"{name}_filter_1")  # container name pattern
-
-    # Lista de workers en la configuracion
     for name, data in config.get("workers", {}).items():
         if data.get("kill", False):
             for i in range(1, data.get("count", 0) + 1):
                 if name == "credits" or name == "ratings":
                     whitelist.add(f"{name}_joiner_{i}")
                 else:
-                    whitelist.add(f"{name}_filter_{i}")  # container name pattern
+                    whitelist.add(f"{name}_filter_{i}")
 
-    # Lista de agregators
     for name, data in config.get("aggregators", {}).items():
         if data.get("kill", False):
             whitelist.add(f"{name}_aggregator")
 
-    # Monitores
     monitors_cfg = config.get("monitors", {})
     count = monitors_cfg.get("count", 1)
     kill_monitors = monitors_cfg.get("kill", False)
 
-    # Skipeamos uno para que pueda levantar al resto
     if kill_monitors:
-        for i in range(2, count + 1):  # start from 2 to skip monitor_1
+        for i in range(2, count + 1):
             whitelist.add(f"monitor_{i}")
 
     if config["client_decodifier"].get("kill", False):
-        whitelist.add("client_decodifier")  # static name
+        whitelist.add("client_decodifier")
 
     return whitelist
 
 def main():
-    # Docker Desktop usa un socket diferente que docker comun, hay que setearlo a mano:
     os.environ['DOCKER_HOST'] = f'unix://{os.path.expanduser("~")}/.docker/desktop/docker.sock'
     with open(sys.argv[1], "r") as f:
         config = yaml.safe_load(f)

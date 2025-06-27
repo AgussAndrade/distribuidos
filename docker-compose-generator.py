@@ -8,15 +8,12 @@ def generate_docker_yaml(config):
     clients = config["clients"]
     aggregators = config["aggregators"]
     
-    # Configuración de monitores desde YAML
     monitors_config = config.get("monitors", {})
     monitor_count = monitors_config.get("count", 3)
     base_port = monitors_config.get("base_port", 50000)
     cluster_base_port = monitors_config.get("cluster_base_port", 50010)
     
-    # Configuración de heartbeat desde YAML (NUEVO)
     heartbeat_interval = monitors_config.get("heartbeat_interval", 5000)
-    heartbeat_interval_for_service = int(heartbeat_interval) / 2
     heartbeat_timeout = monitors_config.get("heartbeat_timeout", 15000)
     election_timeout = monitors_config.get("election_timeout", 10000)
 
@@ -68,7 +65,6 @@ def generate_docker_yaml(config):
         }
     }
 
-    # Lista para rastrear todos los servicios que se van a generar
     all_services = ["worker", "client_decodifier"]
 
     for client in clients:
@@ -232,7 +228,6 @@ def generate_docker_yaml(config):
     monitor_cluster_nodes = [f"monitor_{i}" for i in range(1, monitor_count + 1)]
     monitor_service_ports = []
     
-    # Generar la lista de servicios esperados para los monitores
     expected_services_str = ",".join(all_services)
     
     for i in range(1, monitor_count + 1):
@@ -247,8 +242,8 @@ def generate_docker_yaml(config):
                 "dockerfile": "monitor/monitor_cluster.dockerfile"
             },
             "ports": [
-                f"{service_port}:{service_port}",  # Puerto para servicios
-                f"{cluster_port}:{cluster_port}"   # Puerto para comunicación cluster
+                f"{service_port}:{service_port}",
+                f"{cluster_port}:{cluster_port}"
             ],
             "container_name": monitor_name,
             "environment": [
@@ -265,7 +260,6 @@ def generate_docker_yaml(config):
             "volumes": ["/var/run/docker.sock:/var/run/docker.sock"]
         }
     
-    # Configurar dependencias de servicios a los monitores
     for service_name in template["services"]:
         if not service_name.startswith("monitor_") and service_name != "rabbitmq":
             if "environment" not in template["services"][service_name]:
@@ -273,12 +267,11 @@ def generate_docker_yaml(config):
             
             container_name = template["services"][service_name].get("container_name", service_name)
             
-            # Configurar múltiples monitores con sus puertos específicos
             template["services"][service_name]["environment"].extend([
                 f"MONITOR_HOSTS={','.join(monitor_cluster_nodes)}",
                 f"MONITOR_PORTS={','.join(monitor_service_ports)}",
                 f"HEARTBEAT_INTERVAL={heartbeat_interval}",
-                f"SERVICE_NAME={container_name}"  # Usar container_name en lugar de service_name
+                f"SERVICE_NAME={container_name}"
             ])
             
             if "depends_on" not in template["services"][service_name]:

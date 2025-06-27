@@ -132,9 +132,6 @@ class CSVSender:
                 if line_count % 10000 == 0:
                     progress = (bytes_sent / file_size) * 100 if file_size > 0 else 0
                     logger.debug(f"Progreso de {file_path}: {progress:.2f}% ({line_count} líneas enviadas)")
-                # if line_count > 40000:
-                #     logger.info(f"matando cliente en las 40000 lineas")
-                #     exit(22)
 
 
         if not self._send_line("EOF"):
@@ -245,7 +242,6 @@ class CSVReceiver:
                     line = self._recv_line(client_socket)
                     if not line:
                         logger.error("Error recibiendo línea, cliente posiblemente desconectado")
-                        # write a trhow of a matching exception, client disconected unexpectedly
                         raise ConnectionError("Cliente desconectado inesperadamente")
 
 
@@ -259,7 +255,6 @@ class CSVReceiver:
                     line_count += 1
                     current_batch.append(line)
 
-                    # Log cada 5 segundos o cada 1000 líneas
                     current_time = time.time()
                     if current_time - last_log_time >= 5 or line_count % 1000 == 0:
                         logger.debug(f"Progreso de {name}: {line_count} líneas recibidas")

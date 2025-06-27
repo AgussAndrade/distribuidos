@@ -10,14 +10,13 @@ from worker.worker import Worker
 class AbstractAggregator(Worker):
     def __init__(self, results=None):
         super().__init__()
-        self.max_file_size = 100 * 1024  # 1kB masomenos
+        self.max_file_size = 100 * 1024
         self.total_batches_per_client = defaultdict(int)
         self.received_batches_per_client = defaultdict(int)
         self.processed_batch_ids = set()
         self.results_log_name = "_resultados.log"
         self.results = results if results else {}
         self.producer = self.create_producer()
-        # Es importante que se procese antes de comenzar a leer de nuevo
         self.load_processed_batches()
         self.consumer = self.create_consumer()
 
@@ -74,9 +73,9 @@ class AbstractAggregator(Worker):
             self.logger.info(
                 f"Se actualiza la cantidad total de batches para el cliente {client_id}: {self.total_batches_per_client[client_id]}.")
 
-        # En estos tres pasos se procesa, persiste y agrega el mensaje
+
         result = self.process_message(client_id, message)
-        if result is None: # Esto es para el caso del que en el aggregator no tengo el movies todavia
+        if result is None:
             self.logger.info(f"Este mensaje se persistio {batch_id} del cliente {client_id}, se va a prcesar luego.")
             self.consumer.ack(batch_id)
             return
@@ -93,11 +92,9 @@ class AbstractAggregator(Worker):
         elif current_file_size > self.max_file_size:
             self.logger.info(
                 f"El archivo de log del cliente {client_id} ha superado el tamaño máximo de {self.max_file_size} bytes.")
-            # Aca capaz agregar una condicion para no revisar siempre el tamaño del archivo
             self.compact_log_for_client(client_id)
 
     def send_batch_processed(self, client_id, batch_id, batch_size, total_batches):
-        # TODO abstraer en otra clase para que no meta ruido aca. Esto es para los joiners
         pass
 
     def check_if_its_completed(self, client_id):
@@ -117,7 +114,6 @@ class AbstractAggregator(Worker):
             self.results.pop(client_id)
             self.total_batches_per_client.pop(client_id)
             self.received_batches_per_client.pop(client_id)
-            # Si se cae aca, no se borra el log del cliente y el resultado se envia dos veces. Suponemos que no es un problema
             self.delete_file(f"{client_id}{self.results_log_name}")
         except KeyError:
             self.logger.exception(f"Error al eliminar el resultado del cliente {client_id}")
@@ -148,7 +144,6 @@ class AbstractAggregator(Worker):
             f.write(f"END_TRANSACTION;{batch_id}\n")
             f.flush()
             os.fsync(f.fileno())
-            # Hago el chequeo aca porque ya tengo el file descriptor abierto
             return os.fstat(f.fileno()).st_size
 
     def load_processed_batches(self):
@@ -197,7 +192,6 @@ class AbstractAggregator(Worker):
                             total_batches = current_payload.get("total_batches")
 
                             if client_id not in self.results:
-                                # self.results[client_id] = {}
                                 self.received_batches_per_client[client_id] = 0
                                 self.logger.info(f"Nuevo cliente recuperado: {client_id}")
 
@@ -234,7 +228,6 @@ class AbstractAggregator(Worker):
             compacted_file = filename
 
             try:
-                # Verificar si el archivo compactado termina con END_TRANSACTION para ver si es válido
                 with open(compacted_file, "r") as f:
                     lines = f.readlines()
                     if not lines or not any(line.startswith("END_TRANSACTION") for line in reversed(lines[-5:])):
@@ -244,12 +237,10 @@ class AbstractAggregator(Worker):
                         self.logger.info(f"Archivo compactado inválido {compacted_file} eliminado.")
                         continue
 
-                if os.path.exists(log_file):  # Como el compactado esta bien, borro el original
+                if os.path.exists(log_file):
                     os.remove(log_file)
                     self.logger.info(f"Archivo original {log_file} eliminado porque hay un archivo compactado válido.")
 
-                # Esto es bastante costoso, pero sino la operacion de renombre no es atomica. Igual es un caso bastante
-                # borde que no deberia pasar: que al hacer la compactacion no se haya renombrado el archivo
                 shutil.copy2(compacted_file, log_file)
                 self.logger.info(f"Archivo {compacted_file} copiado de forma segura a {log_file}.")
                 os.remove(compacted_file)
@@ -288,7 +279,6 @@ class AbstractAggregator(Worker):
             total_batches = current_payload.get("total_batches")
 
             if client_id not in self.results:
-                # self.results[client_id] = {}
                 self.received_batches_per_client[client_id] = 0
                 self.logger.info(f"Nuevo cliente recuperado: {client_id}")
 
@@ -317,7 +307,7 @@ class AbstractAggregator(Worker):
         total_batches = self.total_batches_per_client.get(client_id, None)
         received_batches = self.received_batches_per_client.get(client_id, 0)
 
-        # Filtrar solo los batch_ids del cliente actual
+
         client_batch_ids = [bid for bid in self.processed_batch_ids if bid.startswith(client_id)]
 
         if aggregated_result is None or received_batches == 0 or not client_batch_ids:
@@ -326,11 +316,10 @@ class AbstractAggregator(Worker):
 
         try:
             with open(log_file + "_compacted", "w") as f:
-                # Se usa un formato mas liviano para guardar las entradas que solo tienen id
                 for batch_id in client_batch_ids[:-1]:
                     f.write(f"ID;{batch_id}\n")
 
-                compacted_batch_id = client_batch_ids[-1]  # Se usa el ultimo batch_id para el compactado
+                compacted_batch_id = client_batch_ids[-1]
                 payload = {
                     "client_id": client_id,
                     "result": aggregated_result,
@@ -342,7 +331,6 @@ class AbstractAggregator(Worker):
                 f.write(f"END_TRANSACTION;{compacted_batch_id}\n")
                 f.flush()
                 os.fsync(f.fileno())
-                # Flush al disco, no vaya a ser que todavia lo tengamos en ram. Hace falta si es que ya cerramos el file descriptor?
 
             self.logger.info(f"Archivo de log compactado exitosamente para el cliente {client_id}.")
             
@@ -360,7 +348,6 @@ class AbstractAggregator(Worker):
 
     @staticmethod
     def fsync_dir():
-        # Forzamos la sincronización del directorio para asegurarnos de que los cambios se escriban en disco
         dir_fd = os.open(".", os.O_DIRECTORY)
         try:
             os.fsync(dir_fd)

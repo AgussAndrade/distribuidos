@@ -24,7 +24,7 @@ class Consumer(threading.Thread):
         self._exchange_name = f'{queue_type}_exchange'
         self._consumer_id = str(uuid.uuid4())[:8]
         self._actual_queue_name = None
-        self._delivery_tags = {}  # batchs_ids para rabbitmq
+        self._delivery_tags = {}
 
     def connect(self) -> bool:
         try:

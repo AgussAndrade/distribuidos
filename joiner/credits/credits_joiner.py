@@ -162,7 +162,6 @@ class CreditsJoiner(AbstractAggregator):
         return top_10
 
     def handle_movies_message(self, message):
-        # TODO chequear que sea por cliente y no todo el archivo
         client_id = message.get("client_id")
         movies = [movie["id"] for movie in message.get("movies")]
         self.persist_movies(client_id, movies)
@@ -249,7 +248,6 @@ class CreditsJoiner(AbstractAggregator):
                 with open(filename, "r") as f:
                     lines = [line.strip() for line in f.readlines()]
 
-                    # Validamos que sea un archivo valido, sino nos caimos guardando el archivo
                     if len(lines) != 2 or not lines[0].startswith("BEGIN_TRANSACTION;") or lines[1] != "END_TRANSACTION;":
                         self.logger.error(f"Formato inválido en archivo {filename}. Se omite.")
                         continue
